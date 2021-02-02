@@ -10,7 +10,7 @@ void do_final_merge(char* output_file , int run_size,int num_ways);
 
 vector<int> sizes; //get from metadata
 vector<int> col_index={1}; //get from metadata
-int curr_scratch_file=3;
+int curr_scratch_file=2;
 int no_of_cols;
 
 
@@ -26,7 +26,7 @@ struct CompareHeight {
     {
         // return "true" if "p1" is ordered 
         // before "p2", for example:
-        return p1.t < p2.t;
+        return p1.t > p2.t;
     }
 };
 
@@ -110,10 +110,11 @@ void do_final_merge(char* output_file , int run_size,int num_ways)
     // }
 
     priority_queue<Tuple, vector<Tuple>, CompareHeight> Q;
+    priority_queue<Tuple, vector<Tuple>, CompareHeight> copy;
    
 
     FILE* in[curr_scratch_file]; 
-    for (int i = 0; i <curr_scratch_file-1; i++) { 
+    for (int i = 0; i <curr_scratch_file; i++) { 
         char fileName[10]; 
   
         // convert i to string 
@@ -136,7 +137,7 @@ void do_final_merge(char* output_file , int run_size,int num_ways)
     string s;
     char line[256];
     cout<<"first heap elements \n";
-    for (i = 0;i<curr_scratch_file-1; i++)
+    for (i = 0;i<curr_scratch_file; i++)
     { 
     // break if no output file is empty and 
     // index i will be no. of input files 
@@ -144,10 +145,10 @@ void do_final_merge(char* output_file , int run_size,int num_ways)
 
 
     cout<<"my data is "<<line<<"\n";
-    Tuple tt(line,i);
+    Tuple* tt = new Tuple(line,i);
     // tt.index=i;
     // tt.t=line;
-    Q.push(tt); 
+    Q.push(*tt); 
     
     //cout<<line<<" ";
         
@@ -160,15 +161,14 @@ void do_final_merge(char* output_file , int run_size,int num_ways)
   
     int count = 0; 
 
-    int p=7;
+    int p=curr_scratch_file;
     while (p>0) { 
-        // Get the minimum element 
-        // and store it in output file 
+        memset(line, 0, 256);
         
         Tuple temp = Q.top();
         Q.pop();
         string toput = temp.t; 
-        cout<<toput<<"\n";
+        cout<<"removing "<<toput<<" from file "<<temp.index <<"\n";
         fputs(toput.c_str(),out);
 
         
@@ -178,24 +178,25 @@ void do_final_merge(char* output_file , int run_size,int num_ways)
         // root of heap. The next element 
         // belongs to same 
         // input file as the current min element. 
-        fgets(line, sizeof(line), in[temp.index]);
-
-        Tuple tuppy(line,temp.index);
-         Q.push(tuppy);
-
-        // if (fgets(in[root.i], "%s",&root.element)!= 1)
-        // { 
-        //     fgets(line, sizeof(line), in[root.i]);
-        //     root.element = INT_MAX; 
-        //     count++; 
-        // } 
-  
-        // Replace root with next 
-        // element of input file 
+        if(fgets(line, sizeof(line), in[temp.index])==NULL)
+        {
+            cout<<"trying for "<<temp.index<<" ";
+            p--;
+            continue;
+        }
+        else
+        {
+            
+            
+            cout<<"getting "<<line<<" from file "<<temp.index<<" \n";
+            Tuple* tuppy = new Tuple(line,temp.index);
+            Q.push(*tuppy);
+        }
         
-        p--;
+        
     } 
-  
+    
+
     // close input and output files
     for (int i = 0; i <curr_scratch_file-1; i++){fclose(in[i]);}
      
