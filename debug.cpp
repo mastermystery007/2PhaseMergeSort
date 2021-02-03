@@ -9,8 +9,8 @@ void do_final_merge(char* output_file , int run_size,int num_ways);
 
 
 vector<int> sizes; //get from metadata
-vector<int> col_index={1}; //get from metadata
-int curr_scratch_file=2;
+vector<int> col_index={1,2}; //get from metadata
+int curr_scratch_file=0;
 int no_of_cols;
 
 
@@ -21,13 +21,33 @@ class Tuple
         int index;
         Tuple(string t,int in): t(t),index(in){}
 };
-struct CompareHeight {
+struct CompareTuples {
     bool operator()(Tuple const& p1, Tuple const& p2)
     {
-        // return "true" if "p1" is ordered 
-        // before "p2", for example:
-        //RETURN IN ASCENDING ORDER .
-        return p1.t > p2.t;
+        vector<string> elem1;
+        vector<string> elem2;
+        string elem1t = p1.t;
+        string elem2t = p2.t;
+        for(int i=0;i<sizes.size();i++)
+        {
+            string token = elem1t.substr(0,sizes[i]);
+            elem1.push_back(token);
+            elem1t.erase(0,  sizes[i]+2);
+        }
+
+        for(int i=0;i<sizes.size();i++)
+        {
+            string token = elem2t.substr(0,sizes[i]);
+            elem2.push_back(token);
+            elem2t.erase(0,  sizes[i]+2);
+        }
+
+        for(int i=0;i<col_index.size();i++)
+        {
+            if(elem1[col_index[i]] == elem2[col_index[i]]){continue;}
+            return elem1[col_index[i]] > elem2[col_index[i]];
+        }
+        return true;
     }
 };
 
@@ -90,8 +110,8 @@ int main()
 
     //
     //TODO      num_scratch_files = totalsize/(runsize*size of one row)
-    int run_size = 50; //number of rows in a file 
-    int num_ways = 2;  //number of scratch files you want
+    int run_size = 10; //number of rows in a file 
+    int num_ways = 10;  //number of scratch files you want
 
     create_initial_runs(input_file,run_size,num_ways);
 
@@ -105,22 +125,15 @@ int main()
 
 void do_final_merge(char* output_file , int run_size,int num_ways)
 {
-    // for(int i=0;i<curr_scratch_file;i++)
-    // {
-    //     cout<<i <<" scratch file present"<<"\n";
-    // }
 
-    priority_queue<Tuple, vector<Tuple>, CompareHeight> Q;
-    priority_queue<Tuple, vector<Tuple>, CompareHeight> copy;
+    priority_queue<Tuple, vector<Tuple>, CompareTuples> Q;
    
 
     FILE* in[curr_scratch_file]; 
-    for (int i = 0; i <curr_scratch_file; i++) { 
+    for (int i = 0; i <curr_scratch_file; i++)
+    { 
         char fileName[10]; 
-  
-        // convert i to string 
         snprintf(fileName, sizeof(fileName),"%d", i); 
-  
         // Open output files in read mode. 
         in[i] = openFile(fileName, "r"); 
     } 
@@ -128,11 +141,6 @@ void do_final_merge(char* output_file , int run_size,int num_ways)
     
     // FINAL OUTPUT FILE 
     FILE* out = openFile(output_file, "wa"); 
-  
-    // Create a min heap with k heap 
-    // nodes. Every heap node 
-    // has first element of scratch 
-    // output file 
     
     int i; 
     string s;
@@ -140,30 +148,24 @@ void do_final_merge(char* output_file , int run_size,int num_ways)
     cout<<"first heap elements \n";
     for (i = 0;i<curr_scratch_file; i++)
     { 
-    // break if no output file is empty and 
-    // index i will be no. of input files 
-    fgets(line, sizeof(line), in[i]);
-
-
-    cout<<"my data is "<<line<<"\n";
-    Tuple* tt = new Tuple(line,i);
-    // tt.index=i;
-    // tt.t=line;
-    Q.push(*tt); 
-    
-    //cout<<line<<" ";
-        
-    // Index of scratch output file 
+        memset(line, 0, 256);
+        if(fgets(line, sizeof(line), in[i])!=NULL)
+        {
+            cout<<"my data is "<<line<<"\n";
+            Tuple* tt = new Tuple(line,i);
+            Q.push(*tt); 
+        }
+        else{curr_scratch_file--;}
 
     } 
 
     cout<<"****";
  
-  
+    cout<<"current size is "<<Q.size();
     int count = 0; 
 
-    int p=curr_scratch_file;
-    while (p>0) { 
+    int p=0;
+    while (p<curr_scratch_file) { 
         memset(line, 0, 256);
         
         Tuple temp = Q.top();
@@ -173,16 +175,11 @@ void do_final_merge(char* output_file , int run_size,int num_ways)
         fputs(toput.c_str(),out);
 
         
-        
-        // Find the next element that 
-        // will replace current 
-        // root of heap. The next element 
-        // belongs to same 
-        // input file as the current min element. 
+        //Find the next element that will replace current root of heap. The next element belongs to same  input file as the current min element. 
         if(fgets(line, sizeof(line), in[temp.index])==NULL)
         {
             cout<<"trying for "<<temp.index<<" ";
-            p--;
+            p++;
             continue;
         }
         else
@@ -200,8 +197,6 @@ void do_final_merge(char* output_file , int run_size,int num_ways)
 
     // close input and output files
     for (int i = 0; i <curr_scratch_file-1; i++){fclose(in[i]);}
-     
-  
     fclose(out);  
 
 }
@@ -213,16 +208,13 @@ void create_initial_runs( char* input_file, int run_size, int num_ways)
     fstream in;
     in.open(input_file,ios::in);
 
-
-    
-    char fileName[10]; 
+    //char fileName[10]; 
     //int next_output_file=0; 
     
     bool moreinput = true;
     string line;
-    
-    
     int i;
+    
     while(moreinput)
     {
         vector<vector<string>> tuples;
@@ -255,11 +247,14 @@ void create_initial_runs( char* input_file, int run_size, int num_ways)
 
         for(int i=0;i<tuples.size();i++)
         {
+            string  addend= "";
             for(int j=0;j<tuples[0].size();j++)
             {
-                t<<tuples[i][j]<<"   ";//convert to string and remove last 2 chars
+                addend  =addend + tuples[i][j]+"  ";//convert to string and remove last 2 chars
             }
-            t<<"\n";
+            
+            string n_a= addend.substr(0,addend.size()-2)+"\n";
+            t<<n_a;
         }
         t.close();
 
