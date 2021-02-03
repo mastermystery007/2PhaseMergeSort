@@ -26,6 +26,7 @@ struct CompareHeight {
     {
         // return "true" if "p1" is ordered 
         // before "p2", for example:
+        //RETURN IN ASCENDING ORDER .
         return p1.t > p2.t;
     }
 };
@@ -92,7 +93,7 @@ int main()
     int run_size = 50; //number of rows in a file 
     int num_ways = 2;  //number of scratch files you want
 
-    //create_initial_runs(input_file,run_size,num_ways);
+    create_initial_runs(input_file,run_size,num_ways);
 
     do_final_merge(output_file,run_size,num_ways);
 
