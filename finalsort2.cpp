@@ -12,8 +12,9 @@ void do_sort_and_write(vector<vector<string>> t, int scratch_file_id);
 
 
 vector<int> sizes; //get from metadata
-vector<int> col_index={1,2}; //get from metadata
+vector<int> col_index; //get from metadata
 vector<string> col_names;
+bool ascend=true;
 int curr_scratch_file=0;
 int no_of_cols;
 int no_of_threads=2;
@@ -82,9 +83,17 @@ bool sortcol( const vector<string>& v1,const vector<string>& v2 )
 } 
   
 
-int main()
+int main(int argc, char** argv) 
 {
     
+    int no_of_args = argc;
+    string ifn = argv[1];
+    string opn = argv[2];
+    string asc = argv[3];
+
+    if(asc == "desc"){ascend = false;}
+
+
     ifstream MyReadFile("input.txt");
     ofstream MyFile("output.txt");
 
@@ -112,7 +121,20 @@ int main()
     }
 
 
+    vector<string> passed_cols;
+
+    for(int i=4 ;i<no_of_args;i++){passed_cols.push_back(string(argv[i]));}
     
+
+    for(int i=0;i<passed_cols.size();i++)
+    {
+        for(int j=0;j<col_names.size();j++)
+        {
+            if(passed_cols[i]==col_names[j]){col_index.push_back(j);break;}
+        }
+    }
+
+    for(int k=0;k<col_index.size();k++){cout<<col_index[k];}
 
 
    
